@@ -1,7 +1,7 @@
 from machine import Pin, I2C, RTC
 import ssd1306
 import utime
-
+import _thread
 # ESP32 Pin assignment 
 i2c = I2C(0, scl=Pin(22), sda=Pin(21))
 
@@ -15,6 +15,9 @@ oled_width = 128
 oled_height = 64
 oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c)
 
+button_pin1 = Pin(16, Pin.IN, Pin.PULL_UP)
+button_pin2 = Pin(17, Pin.IN, Pin.PULL_UP)
+button_pin3 = Pin(18, Pin.IN, Pin.PULL_UP)
 menu = 0
 
 # Kết nối wifi
@@ -87,9 +90,39 @@ def display_signal_strength(x, y, bars, bar_width, gap):
             for k in range(bar_width):
                 oled.pixel(bar_x + k, y + bars - j, 1)
 
+# Function to handle button press
+def handle_button1_press():
+    global menu
+    while True:
+        if button_pin1.value() == 0:
+            menu += 1
+            print("Menu:", menu)
+        utime.sleep_ms(500)  # Debouncing delay
+def handle_button2_press():
+    global menu
+    while True:
+        if button_pin2.value() == 0:
+            menu += 1
+            print("Menu:", menu)
+        utime.sleep_ms(500)  # Debouncing delay
+def handle_button3_press():
+    global menu
+    while True:
+        if button_pin3.value() == 0:
+            menu -= 1
+            print("Menu:", menu)
+        utime.sleep_ms(500)  # Debouncing delay
+# Start button press handling thread
+_thread.start_new_thread(handle_button1_press, ())
+_thread.start_new_thread(handle_button2_press, ())
+_thread.start_new_thread(handle_button3_press, ())
+
 
 # Main loop
 while True:
+    # if button_pin1.value() == 0:
+    #     menu += 1
+    #     print("Menu:", menu)
     if menu == 0:
         oled.fill(0)
         display_date(15,30)
@@ -97,5 +130,11 @@ while True:
         display_signal_strength(5, 3, 4, 1, 1)
         # Show the display
         oled.show()    
-        utime.sleep(1)
-    
+    elif menu == 1:
+        oled.fill(0)
+        oled.text("Menu 1 content", 20, 20)
+        oled.show()  # Show the updated display
+    elif menu == 2:
+        oled.fill(0)
+        pass  # Placeholder for menu 2 functionality
+    utime.sleep(1)
