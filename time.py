@@ -153,29 +153,38 @@ def display_wifi():
     # Hiển thị thông tin về mạng WiFi A
     ssid_A = "Wokwi-GUEST"
     connected_A = "connected" if wlan.isconnected() and wlan.config("essid") == ssid_A else "disconnected"
-    wifi_info_A = "{}:{}".format(ssid_A, connected_A)
-    oled.text(wifi_info_A, 0, 30)
+    wifi_info_A = "{}".format(ssid_A)
+    wifi_info_A1 = "{}".format(connected_A)
+    oled.text(wifi_info_A, 0, 20)
+    oled.text(wifi_info_A1, 0, 30)
+
     
     # Hiển thị thông tin về mạng WiFi B
     ssid_B = "tuthuoc"
     connected_B = "connected" if wlan.isconnected() and wlan.config("essid") == ssid_B else "disconnected"
-    wifi_info_B = "{}:{}".format(ssid_B, connected_B)
+    wifi_info_B = "{}".format(ssid_B)
+    wifi_info_B1 = "{}".format(connected_B)
     oled.text(wifi_info_B, 0, 40)
+    oled.text(wifi_info_B1, 0, 50)
 
-# Danh sách các tủ và thông tin giờ của chúng
+# Danh sách các tủ và thông tin giờ và thuốc của chúng
 tu_list = ["tu1", "tu2", "tu3", "tu4"]
 tu_hours = {"tu1": 12, "tu2": 13, "tu3": 15, "tu4": 16}
 tu_minutes = {"tu1": 30, "tu2": 45, "tu3": 0, "tu4": 15}
+tu_doses_per_day = {"tu1": 3, "tu2": 2, "tu3": 1, "tu4": 4}  # Số lượng thuốc cần uống mỗi ngày
+tu_remaining_doses = {"tu1": 3, "tu2": 2, "tu3": 1, "tu4": 4}  # Số lượng thuốc còn lại trong tủ
 
 # Hàm để cập nhật giá trị của từng tủ từ biến cố định thành biến có thể thay đổi
-def update_tu_time(tu_name, new_hour, new_minute):
-    global tu_hours, tu_minutes
+def update_tu_info(tu_name, new_hour, new_minute, new_doses_per_day, new_remaining_doses):
+    global tu_hours, tu_minutes, tu_doses_per_day, tu_remaining_doses
     tu_hours[tu_name] = new_hour
     tu_minutes[tu_name] = new_minute
+    tu_doses_per_day[tu_name] = new_doses_per_day
+    tu_remaining_doses[tu_name] = new_remaining_doses
 
-# Khai báo biến đếm thời gian
 blink_counter = 0
 
+# Hàm để hiển thị thông tin từng tủ trên màn hình
 def display_table():
     global blink_counter
     # Hiển thị thông tin từ bảng dữ liệu
@@ -184,21 +193,34 @@ def display_table():
     for i, tu_name in enumerate(tu_list):
         hour = tu_hours[tu_name]
         minute = tu_minutes[tu_name]
-        table_info = "{}: {:02d}:{:02d}".format(tu_name, hour, minute)
+        doses_per_day = tu_doses_per_day[tu_name]
+        remaining_doses = tu_remaining_doses[tu_name]
+        table_info = "{}: {:02d}:{:02d}-{}/{}".format(tu_name, hour, minute, doses_per_day, remaining_doses)
         # Kiểm tra nếu tủ này đang được chỉnh sửa và chế độ là 'hour'
         if tu_counter == i + 1 and editing_state == 'hour':
             # Tạo hiệu ứng nhấp nháy bằng biến đếm
             if blink_counter % 2 == 0:
-                table_info = table_info[:-3] + "_" + table_info[-2:]
+                table_info = table_info[:-9] + "_"
         # Kiểm tra nếu tủ này đang được chỉnh sửa và chế độ là 'minute'
         elif tu_counter == i + 1 and editing_state == 'minute':
             # Tạo hiệu ứng nhấp nháy bằng biến đếm
             if blink_counter % 2 == 0:
-                table_info += "_"
+                table_info = table_info[:-6] + "_" 
+        # Kiểm tra nếu tủ này đang được chỉnh sửa và chế độ là 'perday'
+        elif tu_counter == i + 1 and editing_state == 'perday':
+            # Tạo hiệu ứng nhấp nháy bằng biến đếm
+            if blink_counter % 2 == 0:
+                table_info = table_info[:-3] + "_" + table_info[:-2]
+        # Kiểm tra nếu tủ này đang được chỉnh sửa và chế độ là 'remain'
+        elif tu_counter == i + 1 and editing_state == 'remain':
+            # Tạo hiệu ứng nhấp nháy bằng biến đếm
+            if blink_counter % 2 == 0:
+                table_info = table_info[:-1] + "_"
         oled.text(table_info, 0, y_position)
         y_position += row_height
     # Tăng biến đếm thời gian mỗi lần hiển thị bảng
     blink_counter += 1
+
 
 def check_medication_time():
     global tu_list, tu_hours, tu_minutes, hour, minute, oled
@@ -290,6 +312,12 @@ def button1_press_handler():
                 elif editing_state == 'minute':
                     tu_name = tu_list[tu_counter - 1]
                     tu_minutes[tu_name] = (tu_minutes[tu_name] + 1) % 60
+                elif editing_state == 'perday':
+                    tu_name = tu_list[tu_counter - 1]
+                    tu_doses_per_day[tu_name] = (tu_doses_per_day[tu_name] + 1) % 99
+                elif editing_state == 'remain':
+                    tu_name = tu_list[tu_counter - 1]
+                    tu_remaining_doses[tu_name] = (tu_remaining_doses[tu_name] + 1) % 99
             # elif menu == 1:
             #     # if editing_state == 'conectwifi':
             elif menu == 0:
@@ -332,12 +360,18 @@ def button2_press_handler():
                     editing_state = 'minute'
                     print("Editing minute")
                 elif editing_state == 'minute':
-                    editing_state = 'hour'
+                    editing_state = 'perday'
+                    print("Editing perday")
+                elif editing_state == 'perday':
+                    editing_state = 'remain'
+                    print("Editing remain")
+                elif editing_state == 'remain':
                     if tu_counter == 4:
                         editing_state = None
                         print("Close editing")
                         tu_counter -= 3
                     else:
+                        editing_state = 'hour'
                         print("Editing hour")
                         tu_counter += 1
             if menu == 0:
@@ -392,6 +426,12 @@ def button3_press_handler():
                 elif editing_state == 'minute':
                     tu_name = tu_list[tu_counter - 1]
                     tu_minutes[tu_name] = (tu_minutes[tu_name] - 1) % 60
+                elif editing_state == 'perday':
+                    tu_name = tu_list[tu_counter - 1]
+                    tu_doses_per_day[tu_name] = (tu_doses_per_day[tu_name] - 1) % 99
+                elif editing_state == 'remain':
+                    tu_name = tu_list[tu_counter - 1]
+                    tu_remaining_doses[tu_name] = (tu_remaining_doses[tu_name] - 1) % 99
             # elif menu == 1:
             #     if editing_state == 'conectwifi':
 
