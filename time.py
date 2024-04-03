@@ -14,7 +14,7 @@ oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c)
 
 # WiFi credentials
 wifi_ssid = "Wokwi-GUEST"
-wifi_password = ""
+wifi_password = "00"
 
 # Khai báo và cấu hình các chân GPIO cho nút bấm
 button_pin1 = Pin(16, Pin.IN, Pin.PULL_UP)  # Chân GPIO 16
@@ -228,10 +228,11 @@ def check_medication_time():
             break  # Thoát khỏi vòng lặp sau khi hiển thị xong thông báo
 
 def check_time():
-    global tu_list, tu_hours, hour, alert
+    global tu_list, tu_hours, tu_minutes, hour, minute, alert
     current_hour = hour
+    current_minute = minute + 1
     for tu in tu_list:
-        if tu_hours[tu] == current_hour :
+        if tu_hours[tu] == current_hour and tu_minutes[tu] == current_minute:
             alert = True
     
 # Hiện pin
@@ -431,7 +432,8 @@ connect_wifi(wifi_ssid, wifi_password)
 while True:
     check_time()
     if alert:
-        menu += 3
+        if menu < 3:
+            menu += 3
         check_medication_time()
     if menu == 0:
         oled.fill(0)
