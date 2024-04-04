@@ -14,7 +14,7 @@ oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c)
 
 # WiFi credentials
 wifi_ssid = "Wokwi-GUEST"
-wifi_password = "00"
+wifi_password = ""
 
 # Khai báo và cấu hình các chân GPIO cho nút bấm
 button_pin1 = Pin(16, Pin.IN, Pin.PULL_UP)  # Chân GPIO 16
@@ -28,7 +28,8 @@ ntp_synced = False
 initial_time = 0
 menu = 0
 editing_state = None
-alert = True
+alert = False
+wifi = False
 
 minute_incremented = False
 hour_incremented = False
@@ -39,7 +40,7 @@ year = 2024
 month = 4
 day = 3
 hour = 12
-minute = 30
+minute = 0
 second = 0
 # Create RTC object
 rtc = RTC()
@@ -83,13 +84,14 @@ def get_datetime():
 
 
 def display_datetime(x, y):
-    global year, month, day, hour, minute, second, blink_counter, minute_incremented, hour_incremented, day_incremented, month_incremented, year_incremented
+    global year, month, day, hour, minute, second, blink_counter, minute_incremented, hour_incremented, day_incremented, month_incremented, year_incremented, wifi
     datetime_obj = get_datetime()
     if datetime_obj:
+        wifi = True
         year, month, day, hour, minute, second, *_ = datetime_obj
         date_str = "{:02d}-{:02d}-{:02d}".format(day, month, year)
         time_str = "{}:{:02d}:{:02d}".format(hour, minute, second)
-    else:
+    elif (~wifi):
         current_time = rtc.datetime()
         # Sử dụng thời gian được thiết lập sẵn
         if current_time[6] == 0:
@@ -171,8 +173,8 @@ def display_wifi():
 tu_list = ["tu1", "tu2", "tu3", "tu4"]
 tu_hours = {"tu1": 12, "tu2": 13, "tu3": 15, "tu4": 16}
 tu_minutes = {"tu1": 30, "tu2": 45, "tu3": 0, "tu4": 15}
-tu_doses_per_day = {"tu1": 3, "tu2": 2, "tu3": 1, "tu4": 4}  # Số lượng thuốc cần uống mỗi ngày
-tu_remaining_doses = {"tu1": 3, "tu2": 2, "tu3": 1, "tu4": 4}  # Số lượng thuốc còn lại trong tủ
+tu_doses_per_day = {"tu1": 1, "tu2": 1, "tu3": 1, "tu4": 1}  # Số lượng thuốc cần uống mỗi ngày
+tu_remaining_doses = {"tu1": 20, "tu2": 20, "tu3": 20, "tu4": 20}  # Số lượng thuốc còn lại trong tủ
 
 # Hàm để cập nhật giá trị của từng tủ từ biến cố định thành biến có thể thay đổi
 def update_tu_info(tu_name, new_hour, new_minute, new_doses_per_day, new_remaining_doses):
@@ -223,7 +225,7 @@ def display_table():
 
 
 def check_medication_time():
-    global tu_list, tu_hours, tu_minutes, hour, minute, oled
+    global tu_doses_per_day, tu_hours, tu_minutes, hour, minute, oled, alert, menu
 
     current_hour = hour
     current_minute = minute
@@ -231,9 +233,12 @@ def check_medication_time():
     message1 = "medicine from"
     blink_counter = 0  # Biến đếm cho việc nhấp nháy
     display_duration = 5  # Thời gian hiển thị thông báo (giây)
-
-    for tu in tu_list:
+    i=0
+    for tu in tu_doses_per_day:
         if tu_hours[tu] == current_hour and tu_minutes[tu] == current_minute:
+            if menu < 3:
+                menu += 3
+            i+=1
             message2 =  "{}".format(tu)
             start_time = utime.time()  # Thời gian bắt đầu hiển thị thông báo
 
@@ -248,11 +253,13 @@ def check_medication_time():
                 utime.sleep(1)
                 blink_counter += 1
             break  # Thoát khỏi vòng lặp sau khi hiển thị xong thông báo
+    if (i>0):
+        alert = False
 
 def check_time():
     global tu_list, tu_hours, tu_minutes, hour, minute, alert
     current_hour = hour
-    current_minute = minute + 1
+    current_minute = minute - 1
     for tu in tu_list:
         if tu_hours[tu] == current_hour and tu_minutes[tu] == current_minute:
             alert = True
@@ -294,7 +301,7 @@ tu_counter = 1
 
 # Hàm xử lý sự kiện nút bấm
 def button1_press_handler():
-    global menu, editing_state, tu_counter, year, month, day, hour, minute
+    global menu, editing_state, tu_counter, year, month, day, hour, minute, wifi
     while True:
         button_lock.acquire()
         if button_pin1.value() == 0:
@@ -320,7 +327,7 @@ def button1_press_handler():
                     tu_remaining_doses[tu_name] = (tu_remaining_doses[tu_name] + 1) % 99
             # elif menu == 1:
             #     # if editing_state == 'conectwifi':
-            elif menu == 0:
+            elif menu == 0 and ~wifi:
                 if editing_state == 'hour':
                     hour = (hour + 1) % 24
                 elif editing_state == 'minute':
@@ -347,7 +354,7 @@ def button1_press_handler():
         utime.sleep_ms(100)  # Debouncing delay
 
 def button2_press_handler():
-    global editing_state, tu_counter, alert, menu
+    global editing_state, tu_counter, alert, menu, wifi
     while True:
         button_lock.acquire()
         if button_pin2.value() == 0:
@@ -374,7 +381,7 @@ def button2_press_handler():
                         editing_state = 'hour'
                         print("Editing hour")
                         tu_counter += 1
-            if menu == 0:
+            if menu == 0 and ~wifi:
                 if editing_state is None:
                     editing_state = 'hour'
                     print("Editing hour")
@@ -408,7 +415,7 @@ def button2_press_handler():
         utime.sleep_ms(100)  # Debouncing delay
 
 def button3_press_handler():
-    global menu, editing_state, tu_counter
+    global menu, editing_state, tu_counter, year, month, day, hour, minute, wifi
     while True:
         button_lock.acquire()
         if button_pin3.value() == 0:
@@ -435,7 +442,7 @@ def button3_press_handler():
             # elif menu == 1:
             #     if editing_state == 'conectwifi':
 
-            elif menu == 0:
+            elif menu == 0 and ~wifi:
                 if editing_state == 'hour':
                     hour = (hour - 1) % 24  # Sửa dấu cộng thành dấu trừ
                 elif editing_state == 'minute':
@@ -472,8 +479,6 @@ connect_wifi(wifi_ssid, wifi_password)
 while True:
     check_time()
     if alert:
-        if menu < 3:
-            menu += 3
         check_medication_time()
     if menu == 0:
         oled.fill(0)
