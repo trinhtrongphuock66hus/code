@@ -200,17 +200,17 @@ def display_table():
         if tu_counter == i + 1 and editing_state == 'hour':
             # Tạo hiệu ứng nhấp nháy bằng biến đếm
             if blink_counter % 2 == 0:
-                table_info = table_info[:-9] + "_"
+                table_info = table_info[:6] + "_" + table_info[7:]
         # Kiểm tra nếu tủ này đang được chỉnh sửa và chế độ là 'minute'
         elif tu_counter == i + 1 and editing_state == 'minute':
             # Tạo hiệu ứng nhấp nháy bằng biến đếm
             if blink_counter % 2 == 0:
-                table_info = table_info[:-6] + "_" 
+                table_info = table_info[:9] + "_" + table_info[10:]
         # Kiểm tra nếu tủ này đang được chỉnh sửa và chế độ là 'perday'
         elif tu_counter == i + 1 and editing_state == 'perday':
             # Tạo hiệu ứng nhấp nháy bằng biến đếm
             if blink_counter % 2 == 0:
-                table_info = table_info[:-3] + "_" + table_info[:-2]
+                table_info = table_info[:-3] + "_" + table_info[-2:]
         # Kiểm tra nếu tủ này đang được chỉnh sửa và chế độ là 'remain'
         elif tu_counter == i + 1 and editing_state == 'remain':
             # Tạo hiệu ứng nhấp nháy bằng biến đếm
